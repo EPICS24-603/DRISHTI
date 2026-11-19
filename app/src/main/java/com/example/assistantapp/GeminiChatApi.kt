@@ -1,7 +1,7 @@
 package com.example.assistantapp
 
 /** Sends a spoken question and optional recent scene description to Gemini. */
-suspend fun sendMessageToGeminiAI(message: String, frameData: String? = null): String {
+suspend fun askDrishti(message: String, frameData: String? = null): String {
     val context = frameData?.takeIf { it.isNotBlank() }
         ?.let { "Recent camera description: $it\n\n" }
         .orEmpty()

@@ -107,7 +107,7 @@ fun VoiceAssistantScreen() {
                 status = "Getting an answer…"
                 scope.launch {
                     answer = try {
-                        sendMessageToGeminiAI(spoken)
+                        askDrishti(spoken)
                     } catch (error: Exception) {
                         error.message ?: "Could not get an answer. Please try again."
                     }

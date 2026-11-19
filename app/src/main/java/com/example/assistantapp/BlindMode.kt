@@ -45,10 +45,8 @@ import java.util.concurrent.Executors
 
 @Composable
 fun BlindModeScreen(startInReadMode: Boolean = false) {
-    var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val context = LocalContext.current
-    LocalLifecycleOwner.current
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -62,7 +60,6 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
         )
     }
     var currentMode by remember { mutableStateOf(if (startInReadMode) "reading" else "navigation") }
-    var overlayText by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var isAssistantMode by remember { mutableStateOf(false) }
     var sessionStarted by remember { mutableStateOf(true) }
@@ -78,7 +75,6 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
     var isVoiceMode by remember { mutableStateOf(startInReadMode) }
     var voiceModeResult by remember { mutableStateOf("") }
     var showInstructions by remember { mutableStateOf(true) }
-    var instructionStep by remember { mutableStateOf(0) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         hasPermission = grants.values.all { it }
     }
@@ -117,7 +113,7 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
             
             // Start navigation after 3 seconds
             kotlinx.coroutines.delay(3000)
-            tts.value?.speak("Navigation started. I will describe your surroundings every 3 seconds.", TextToSpeech.QUEUE_FLUSH, null, null)
+            tts.value?.speak("Navigation started. I will describe your surroundings every 6 seconds.", TextToSpeech.QUEUE_FLUSH, null, null)
         }
     }
 
@@ -149,7 +145,7 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                     val spokenText = matches[0]
                     coroutineScope.launch {
                         chatResponse = try {
-                            sendMessageToGeminiAI(spokenText, analysisResult)
+                            askDrishti(spokenText, analysisResult)
                         } catch (error: Exception) {
                             error.message ?: "I could not get an answer. Please try again."
                         }
@@ -194,11 +190,10 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
             if (isVoiceMode) {
                 VoiceModeCamera(
                     onImageCaptured = { bitmap: Bitmap ->
-                        capturedImage = bitmap
                         coroutineScope.launch {
                             voiceModeResult = ""
                             tts.value?.speak("Processing text. Please wait.", TextToSpeech.QUEUE_FLUSH, null, null)
-                            sendFrameToGemini2AI(bitmap, { partialResult ->
+                            readTextFromFrame(bitmap, { partialResult ->
                                 voiceModeResult += partialResult
                                 tts.value?.speak(partialResult, TextToSpeech.QUEUE_ADD, null, null)
                             }, { error ->
@@ -215,17 +210,15 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                         val bitmap = imageProxy.toBitmap()
                         imageProxy.close()
                         lastProcessedTimestamp = currentTimestamp
-                        if (bitmap != null) {
-                            coroutineScope.launch {
-                                sendFrameToGeminiAI(bitmap, { partialResult ->
-                                    analysisResult += " $partialResult"
-                                    val newText = analysisResult.substring(lastSpokenIndex)
-                                    tts.value?.speak(newText, TextToSpeech.QUEUE_ADD, null, null)
-                                    lastSpokenIndex = analysisResult.length
-                                }, { error ->
-                                    tts.value?.speak("Error analyzing image. Please try again.", TextToSpeech.QUEUE_FLUSH, null, null)
-                                })
-                            }
+                        coroutineScope.launch {
+                            analyzeNavigationFrame(bitmap, { partialResult ->
+                                analysisResult += " $partialResult"
+                                val newText = analysisResult.substring(lastSpokenIndex)
+                                tts.value?.speak(newText, TextToSpeech.QUEUE_ADD, null, null)
+                                lastSpokenIndex = analysisResult.length
+                            }, {
+                                tts.value?.speak("Error analyzing image. Please try again.", TextToSpeech.QUEUE_FLUSH, null, null)
+                            })
                         }
                     } else {
                         imageProxy.close()
@@ -264,12 +257,10 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                                     if (navigationPaused) {
                                         tts.value?.stop()
                                         currentMode = "assistant"
-                                        overlayText = ""
                                         tts.value?.speak("Assistant mode activated. Ask me anything about your environment.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     } else {
                                         tts.value?.stop()
                                         currentMode = "navigation"
-                                        overlayText = ""
                                         chatResponse = ""
                                         tts.value?.speak("Assistant mode deactivated. Navigation resumed.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     }
@@ -291,14 +282,12 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                                     
                                     if (isVoiceMode) {
                                         tts.value?.stop()
-                                        currentMode = "voice"
-                                        overlayText = ""
+                                        currentMode = "reading"
                                         navigationPaused = true
                                         tts.value?.speak("Voice mode activated. Point your camera at text to read it.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     } else {
                                         tts.value?.stop()
                                         currentMode = "navigation"
-                                        overlayText = ""
                                         voiceModeResult = ""
                                         navigationPaused = false
                                         tts.value?.speak("Voice mode deactivated. Navigation resumed.", TextToSpeech.QUEUE_FLUSH, null, null)

@@ -40,6 +40,18 @@ The app supports Android 11 (API 30) through Android 15 (API 35). Its release bu
 
 The application uses Kotlin, Jetpack Compose, CameraX, OkHttp, and the Gemini `gemini-3.5-flash-lite` model.
 
+## Codebase map
+
+| Area | Main files |
+| --- | --- |
+| App entry and routes | `MainActivity.kt`, `AppNavigation.kt` |
+| Home and voice UI | `HomeScreen.kt`, `VoiceAssistantScreen.kt` |
+| Camera navigation and text reading | `BlindMode.kt`, `CameraPreviewWithAnalysis.kt` |
+| Gemini integration | `GeminiClient.kt`, `GeminiVisionApi.kt`, `GeminiReadingApi.kt`, `GeminiChatApi.kt` |
+| Colours and typography | `ui/theme/` |
+
+Keep secrets in `local.properties`; it is intentionally excluded from Git. Android Studio files, build output, Gradle caches, and local tools are also excluded so collaborators only commit shared source and configuration.
+
 ## Repository
 
 The refreshed project is maintained at [EPICS24-603/DRISHTI](https://github.com/EPICS24-603/DRISHTI). The original project is at [Sumit-5002/DRISHTI](https://github.com/Sumit-5002/DRISHTI).

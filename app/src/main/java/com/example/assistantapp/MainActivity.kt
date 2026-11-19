@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
                 DrishtiAppTheme(dynamicColor = false) {
-                    Navigation(navController = rememberNavController())
+                    DrishtiNavigation(navController = rememberNavController())
                 }
             }
         }

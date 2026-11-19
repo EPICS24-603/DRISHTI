@@ -19,6 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Assistant App"
+rootProject.name = "DRISHTI"
 include(":app")
- 

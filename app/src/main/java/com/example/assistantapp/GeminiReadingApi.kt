@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Image-to-text mode shares the same configured Gemini client as navigation. */
-suspend fun sendFrameToGemini2AI(
+suspend fun readTextFromFrame(
     bitmap: Bitmap,
     onPartialResult: (String) -> Unit,
     onError: (String) -> Unit

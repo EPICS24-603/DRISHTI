@@ -6,7 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
 @Composable
-fun Navigation(navController: NavHostController) {
+fun DrishtiNavigation(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "mainPage") {
         composable("mainPage") { MainPage(navController) }
         composable("blindMode") { BlindModeScreen() }
