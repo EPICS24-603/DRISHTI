@@ -10,7 +10,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DrishtiAppTheme {
+                DrishtiAppTheme(dynamicColor = false) {
                     Navigation(navController = rememberNavController())
                 }
             }

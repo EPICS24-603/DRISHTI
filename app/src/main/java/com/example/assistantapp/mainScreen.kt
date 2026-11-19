@@ -1,461 +1,208 @@
 package com.example.assistantapp
 
-import android.content.Intent
-import android.net.Uri
+import android.speech.tts.TextToSpeech
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AccessibilityNew
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.compose.ui.graphics.vector.ImageVector
-import android.speech.tts.TextToSpeech
 import java.util.Locale
-import androidx.compose.material3.Button
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val Ink = Color(0xFF102A2A)
+private val Teal = Color(0xFF087E78)
+private val Mint = Color(0xFFE3F5EF)
+private val Paper = Color(0xFFF5F7F4)
+
 @Composable
 fun MainPage(navController: NavHostController) {
-    var showDeveloperInfo by remember { mutableStateOf(false) }
-    var isFirstTime by remember { mutableStateOf(true) }
-    var showHelpTutorial by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val helpVisible = remember { mutableStateOf(false) }
     val tts = remember { mutableStateOf<TextToSpeech?>(null) }
 
-    // Initialize TTS
     LaunchedEffect(Unit) {
         tts.value = TextToSpeech(context) { status ->
             if (status != TextToSpeech.ERROR) {
-                tts.value?.language = Locale.US
-                tts.value?.setSpeechRate(0.9f) // Slower for clarity
+                tts.value?.language = Locale.getDefault()
+                tts.value?.setSpeechRate(0.92f)
             }
         }
     }
-
-    // Welcome message for first-time users
-    LaunchedEffect(isFirstTime) {
-        if (isFirstTime && tts.value != null) {
-            tts.value?.speak(
-                "Welcome to DRISHTI, your AI vision assistant. " +
-                "This app has three main modes: Navigation Mode for real-time guidance, " +
-                "Voice Assistant for asking questions, and Help Tutorial to learn how to use the app. " +
-                "Tap anywhere on the screen to hear options again.",
-                TextToSpeech.QUEUE_FLUSH, null, null
-            )
-            isFirstTime = false
+    DisposableEffect(Unit) {
+        onDispose {
+            tts.value?.stop()
+            tts.value?.shutdown()
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .clickable {
-                // Audio instructions on tap
-                tts.value?.speak(
-                    "DRISHTI has three modes. Navigation Mode: Tap the top button. " +
-                    "Voice Assistant: Tap the middle button. Help Tutorial: Tap the bottom button. " +
-                    "Double tap any button to activate it.",
-                    TextToSpeech.QUEUE_FLUSH, null, null
-                )
-            }
-    ) {
-        // Main Content
+    Box(Modifier.fillMaxSize().background(Paper)) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // App Title with Audio Description
-            Text(
-                text = "DRISHTI",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            Text(
-                text = "AI VISION FOR THE BLIND",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = "Your AI-powered vision assistant for the blind",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            // Accessible Feature Buttons
-            AccessibleFeatureButton(
-                icon = Icons.Default.CameraAlt,
-                title = "Navigation Mode",
-                description = "Real-time camera navigation with AI assistance",
-                audioDescription = "Navigation Mode. Double tap to activate. Provides real-time guidance using your camera.",
-                onClick = { 
-                    tts.value?.speak("Opening Navigation Mode", TextToSpeech.QUEUE_FLUSH, null, null)
-                    navController.navigate("blindMode") 
-                },
-                onDoubleClick = {
-                    tts.value?.speak("Navigation Mode activated", TextToSpeech.QUEUE_FLUSH, null, null)
-                    navController.navigate("blindMode")
-                }
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            AccessibleFeatureButton(
-                icon = Icons.Default.Mic,
-                title = "Voice Assistant",
-                description = "Speak to get information and guidance",
-                audioDescription = "Voice Assistant. Double tap to activate. Ask questions about your environment.",
-                onClick = { 
-                    tts.value?.speak("Opening Voice Assistant", TextToSpeech.QUEUE_FLUSH, null, null)
-                    navController.navigate("voiceAssistant") 
-                },
-                onDoubleClick = {
-                    tts.value?.speak("Voice Assistant activated", TextToSpeech.QUEUE_FLUSH, null, null)
-                    navController.navigate("voiceAssistant")
-                }
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            AccessibleFeatureButton(
-                icon = Icons.Default.Help,
-                title = "Help & Tutorial",
-                description = "Learn how to use the app effectively",
-                audioDescription = "Help and Tutorial. Double tap to activate. Learn how to use DRISHTI effectively.",
-                onClick = { 
-                    tts.value?.speak("Opening Help Tutorial", TextToSpeech.QUEUE_FLUSH, null, null)
-                    showHelpTutorial = true
-                },
-                onDoubleClick = {
-                    tts.value?.speak("Help Tutorial activated", TextToSpeech.QUEUE_FLUSH, null, null)
-                    showHelpTutorial = true
-                }
-            )
-        }
-
-        // Developer Info Button (Top Right)
-        IconButton(
-            onClick = { 
-                showDeveloperInfo = !showDeveloperInfo
-                tts.value?.speak(
-                    if (showDeveloperInfo) "Developer information shown" else "Developer information hidden",
-                    TextToSpeech.QUEUE_FLUSH, null, null
-                )
-            },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = "Developer Info",
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        // Developer Info Card
-        AnimatedVisibility(
-            visible = showDeveloperInfo,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 80.dp, end = 16.dp)
-        ) {
-            Card(
-                modifier = Modifier.width(280.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Developer Info",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Team 36 - VIT Bhopal",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Version 1.0",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Team members:",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "SUMIT PRASAD",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "SUJEET GUPTA",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "ADVAY BHAGAT",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "KUMAR AMAN",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "KRISHANU DAS",
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-
-        // Help Tutorial Overlay
-        AnimatedVisibility(
-            visible = showHelpTutorial,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(16.dp)
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "DRISHTI Help & Tutorial",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "Welcome to DRISHTI! Here's how to use your AI vision assistant:",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    HelpSection(
-                        title = "Navigation Mode",
-                        description = "Real-time guidance using your camera. The app describes your surroundings every 3 seconds.",
-                        instructions = "• Point your camera forward\n• Listen to audio descriptions\n• Get obstacle warnings"
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    HelpSection(
-                        title = "Assistant Mode",
-                        description = "Ask questions about your environment or anything else.",
-                        instructions = "• Double tap the top of the screen\n• Ask questions naturally\n• Get detailed answers"
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    HelpSection(
-                        title = "Voice Mode",
-                        description = "Read text from signs, books, or documents.",
-                        instructions = "• Double tap the bottom of the screen\n• Point camera at text\n• Listen to text being read"
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Text(
-                        text = "Tip: Tap anywhere on the main screen to hear options again!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Button(
-                        onClick = { 
-                            showHelpTutorial = false
-                            tts.value?.speak("Help tutorial closed. You're ready to use DRISHTI!", TextToSpeech.QUEUE_FLUSH, null, null)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Got it! Let's start!")
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = Mint, modifier = Modifier.size(48.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.AccessibilityNew, contentDescription = null, tint = Teal, modifier = Modifier.size(28.dp))
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun AccessibleFeatureButton(
-    icon: ImageVector,
-    title: String,
-    description: String,
-    audioDescription: String,
-    onClick: () -> Unit,
-    onDoubleClick: () -> Unit
-) {
-    var clickCount by remember { mutableStateOf(0) }
-    var clickTimer by remember { mutableStateOf<Long?>(null) }
-    
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { 
-                clickCount++
-                val currentTime = System.currentTimeMillis()
-                
-                if (clickCount == 1) {
-                    clickTimer = currentTime
-                    // Single click - provide audio description
-                    // This will be handled by the parent's clickable modifier
-                } else if (clickCount == 2) {
-                    val timeDiff = currentTime - (clickTimer ?: 0)
-                    if (timeDiff < 500) { // Double click within 500ms
-                        onDoubleClick()
-                        clickCount = 0
-                        clickTimer = null
-                    } else {
-                        clickCount = 1
-                        clickTimer = currentTime
-                    }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("DRISHTI", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                    Text("YOUR WORLD, WITH MORE CLARITY", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
-            },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
+                TextButton(onClick = { helpVisible.value = true }) {
+                    Icon(Icons.Filled.HelpOutline, contentDescription = "Open help", tint = Ink)
+                }
+            }
+
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
+                    .background(Brush.linearGradient(listOf(Color(0xFF123837), Color(0xFF176B65))), RoundedCornerShape(28.dp))
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(50)) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color(0xFFBCEADF), modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text("AI ASSISTANCE, MADE ACCESSIBLE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                    }
+                }
+                Text("Move through\nyour day with confidence.", color = Color.White, fontSize = 29.sp, lineHeight = 35.sp, fontWeight = FontWeight.Bold)
+                Text("Choose a tool to understand what’s around you, ask a question, or read printed text aloud.", color = Color(0xFFE1F2ED), fontSize = 15.sp, lineHeight = 22.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Headphones, contentDescription = null, tint = Color(0xFFBCEADF), modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Voice guidance is available throughout the app", color = Color.White, fontSize = 12.sp)
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("CHOOSE A MODE", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
+                ModeCard(
+                    icon = Icons.Filled.CameraAlt,
+                    title = "Live navigation",
+                    description = "Hear a short description of the scene ahead.",
+                    badge = "CAMERA",
+                    onClick = { navController.navigate("blindMode") }
                 )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ModeCard(
+                    icon = Icons.Filled.Mic,
+                    title = "Ask DRISHTI",
+                    description = "Ask a question by voice and hear the answer.",
+                    badge = "VOICE",
+                    onClick = { navController.navigate("voiceAssistant") }
                 )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Double tap to activate",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
+                ModeCard(
+                    icon = Icons.Filled.Book,
+                    title = "Read text",
+                    description = "Point the camera at a sign, label, or page.",
+                    badge = "READ ALOUD",
+                    onClick = { navController.navigate("readText") }
                 )
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(Icons.Filled.AccessibilityNew, contentDescription = null, tint = Teal, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("A helpful companion, not a replacement for a cane or guide dog.", color = Ink, fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Use your usual mobility tools and follow local safety signals.", color = Color(0xFF526563), fontSize = 12.sp, lineHeight = 18.sp)
+                }
+            }
+            Text("VIT BHOPAL · GROUP 36", color = Color(0xFF71807D), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+            Spacer(Modifier.height(12.dp))
         }
+    }
+
+    if (helpVisible.value) {
+        AlertDialog(
+            onDismissRequest = { helpVisible.value = false },
+            title = { Text("Getting started", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Live navigation uses the camera to describe the scene in short spoken updates.")
+                    Text("Ask DRISHTI listens for a question and reads its answer aloud.")
+                    Text("Read text captures a page or sign and speaks the words it can recognize.")
+                    Text("Allow camera and microphone access when prompted. An internet connection and a Gemini API key are needed for AI features.")
+                }
+            },
+            confirmButton = { Button(onClick = { helpVisible.value = false }) { Text("Done") } }
+        )
     }
 }
 
 @Composable
-fun HelpSection(
-    title: String,
-    description: String,
-    instructions: String
-) {
+private fun ModeCard(icon: ImageVector, title: String, description: String, badge: String, onClick: () -> Unit) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = instructions,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = Mint, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(52.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = Teal, modifier = Modifier.size(26.dp))
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(description, color = Color(0xFF526563), fontSize = 12.sp, lineHeight = 17.sp)
+                Text(badge, color = Teal, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.1.sp)
+            }
+            Icon(Icons.Filled.ArrowForward, contentDescription = "Open $title", tint = Teal)
         }
     }
 }

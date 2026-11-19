@@ -1,7 +1,6 @@
 package com.example.assistantapp
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -35,8 +34,9 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -44,7 +44,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 @Composable
-fun BlindModeScreen() {
+fun BlindModeScreen(startInReadMode: Boolean = false) {
     var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val context = LocalContext.current
@@ -61,7 +61,7 @@ fun BlindModeScreen() {
                     ) == PackageManager.PERMISSION_GRANTED
         )
     }
-    var currentMode by remember { mutableStateOf("navigation") }
+    var currentMode by remember { mutableStateOf(if (startInReadMode) "reading" else "navigation") }
     var overlayText by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     var isAssistantMode by remember { mutableStateOf(false) }
@@ -71,13 +71,16 @@ fun BlindModeScreen() {
     var lastSpokenIndex by remember { mutableStateOf(0) }
     var lastProcessedTimestamp by remember { mutableStateOf(0L) }
     val frameInterval = 3000 // Process a frame every 3 seconds
-    var navigationPaused by remember { mutableStateOf(false) }
+    var navigationPaused by remember { mutableStateOf(startInReadMode) }
     var isMicActive by remember { mutableStateOf(false) }
     var chatResponse by remember { mutableStateOf("") }
-    var isVoiceMode by remember { mutableStateOf(false) }
+    var isVoiceMode by remember { mutableStateOf(startInReadMode) }
     var voiceModeResult by remember { mutableStateOf("") }
     var showInstructions by remember { mutableStateOf(true) }
     var instructionStep by remember { mutableStateOf(0) }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        hasPermission = grants.values.all { it }
+    }
 
     val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
     val speechIntent = remember {
@@ -114,6 +117,12 @@ fun BlindModeScreen() {
             // Start navigation after 3 seconds
             kotlinx.coroutines.delay(3000)
             tts.value?.speak("Navigation started. I will describe your surroundings every 3 seconds.", TextToSpeech.QUEUE_FLUSH, null, null)
+        }
+    }
+
+    LaunchedEffect(hasPermission) {
+        if (!hasPermission) {
+            permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
         }
     }
 
@@ -219,12 +228,6 @@ fun BlindModeScreen() {
                 }
             }
         }
-    } else {
-        ActivityCompat.requestPermissions(
-            (context as Activity),
-            arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
-            1
-        )
     }
 
     // Main UI with simple, accessible controls
