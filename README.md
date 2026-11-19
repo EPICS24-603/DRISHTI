@@ -13,7 +13,7 @@ DRISHTI is an assistive companion. It does not replace a cane, guide dog, traffi
 
 ## Requirements
 
-- Android Studio with Android SDK 35 and a Java 17 JDK.
+- Android Studio with Android SDK platform 35 or newer and a Java 17 JDK.
 - An Android device with a camera and microphone for camera and voice features.
 - A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 
@@ -35,6 +35,8 @@ The Gemini Developer API key is used by the Android app. For a public production
 2. Configure the Gemini key as shown above.
 3. Connect an Android device or start an emulator.
 4. Run the `app` configuration and grant camera or microphone access when prompted.
+
+The app supports Android 11 (API 30) through Android 15 (API 35). Its release build deliberately excludes the Gemini key: a public release should call Gemini through a backend you control, so the key cannot be extracted from the APK. The debug build can use the local key for development testing.
 
 The application uses Kotlin, Jetpack Compose, CameraX, OkHttp, and the Gemini `gemini-3.5-flash-lite` model.
 

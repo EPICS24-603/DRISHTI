@@ -5,5 +5,5 @@ suspend fun sendMessageToGeminiAI(message: String, frameData: String? = null): S
     val context = frameData?.takeIf { it.isNotBlank() }
         ?.let { "Recent camera description: $it\n\n" }
         .orEmpty()
-    return GeminiClient.ask("${context}User's question: $message")
+    return GeminiClient.ask("${context}User's question: $message", maxOutputTokens = 140)
 }

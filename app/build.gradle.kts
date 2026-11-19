@@ -3,11 +3,13 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-val localProperties = java.util.Properties().apply {
+import java.util.Properties
+
+val localProperties = Properties().apply {
     val propertiesFile = rootProject.file("local.properties")
     if (propertiesFile.exists()) propertiesFile.inputStream().use { load(it) }
 }
-val geminiApiKey = providers.gradleProperty("GEMINI_API_KEY").orNull
+val geminiApiKey: String = providers.gradleProperty("GEMINI_API_KEY").orNull
     ?: System.getenv("GEMINI_API_KEY")
     ?: localProperties.getProperty("GEMINI_API_KEY")
     ?: ""
@@ -15,16 +17,19 @@ val escapedGeminiApiKey = geminiApiKey.replace("\\", "\\\\").replace("\"", "\\\"
 
 android {
     namespace = "com.example.assistantapp"
-    compileSdk = 35
+    // Compile with the locally available Android SDK platform while targeting Android 15.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.assistantapp"
-        minSdk = 32
+        // Android 11 (API 30) through Android 15 (API 35).
+        minSdk = 30
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
-        buildConfigField("String", "GEMINI_API_KEY", "\"$escapedGeminiApiKey\"")
+        // Never package a development API key into a release APK.
+        buildConfigField("String", "GEMINI_API_KEY", "\"\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -33,8 +38,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // For local testing only. This value can be extracted from a debug APK.
+            buildConfigField("String", "GEMINI_API_KEY", "\"$escapedGeminiApiKey\"")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

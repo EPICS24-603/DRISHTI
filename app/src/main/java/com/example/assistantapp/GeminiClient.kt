@@ -23,7 +23,11 @@ object GeminiClient {
         .writeTimeout(20, TimeUnit.SECONDS)
         .build()
 
-    suspend fun ask(prompt: String, image: Bitmap? = null): String = withContext(Dispatchers.IO) {
+    suspend fun ask(
+        prompt: String,
+        image: Bitmap? = null,
+        maxOutputTokens: Int = 140
+    ): String = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.GEMINI_API_KEY.trim()
         if (apiKey.isBlank()) {
             throw IllegalStateException("Gemini is not configured. Add GEMINI_API_KEY to local.properties and rebuild.")
@@ -31,8 +35,9 @@ object GeminiClient {
 
         val parts = JSONArray()
         if (image != null) {
+            val uploadImage = scaleForUpload(image)
             val imageBytes = java.io.ByteArrayOutputStream().use { output ->
-                image.compress(Bitmap.CompressFormat.JPEG, 82, output)
+                uploadImage.compress(Bitmap.CompressFormat.JPEG, 80, output)
                 output.toByteArray()
             }
             parts.put(JSONObject().put("inlineData", JSONObject()
@@ -44,7 +49,7 @@ object GeminiClient {
         val body = JSONObject()
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", SYSTEM_PROMPT))))
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts)))
-            .put("generationConfig", JSONObject().put("temperature", 0.25).put("maxOutputTokens", 220))
+            .put("generationConfig", JSONObject().put("temperature", 0.2).put("maxOutputTokens", maxOutputTokens.coerceIn(32, 512)))
 
         val request = Request.Builder()
             .url("https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent")
@@ -76,7 +81,19 @@ object GeminiClient {
         }
     }
 
-    private const val SYSTEM_PROMPT = """
+    private fun scaleForUpload(bitmap: Bitmap): Bitmap {
+        val longestSide = maxOf(bitmap.width, bitmap.height)
+        if (longestSide <= 768) return bitmap
+        val scale = 768f / longestSide
+        return Bitmap.createScaledBitmap(
+            bitmap,
+            (bitmap.width * scale).toInt().coerceAtLeast(1),
+            (bitmap.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
+    }
+
+    private val SYSTEM_PROMPT = """
         You are DRISHTI, a calm and concise visual assistant for people who are blind or have low vision.
         For camera images, describe only details you can see. Start with the most important immediate hazard, then give one short, actionable suggestion. Never claim that a road is safe to cross or that an area is clear when you cannot verify it. Do not guess distances or object properties. Keep spoken answers to two short sentences.
         For reading requests, transcribe visible text in reading order and say when text is unclear. For questions, answer plainly using the provided scene context. Never replace a cane, guide dog, traffic signal, or trusted mobility aid.

@@ -19,7 +19,8 @@ suspend fun sendFrameToGeminiAI(
     try {
         val result = GeminiClient.ask(
             "Briefly describe the scene ahead. Mention an immediate obstacle first, then one useful action. Keep it to two short spoken sentences.",
-            bitmap
+            bitmap,
+            maxOutputTokens = 80
         )
         withContext(Dispatchers.Main) { onPartialResult(result) }
     } catch (error: Exception) {

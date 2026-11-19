@@ -70,7 +70,8 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
     val tts = remember { mutableStateOf<TextToSpeech?>(null) }
     var lastSpokenIndex by remember { mutableStateOf(0) }
     var lastProcessedTimestamp by remember { mutableStateOf(0L) }
-    val frameInterval = 3000 // Process a frame every 3 seconds
+    // A conservative rate keeps the free API quota usable during a navigation session.
+    val frameInterval = 6000L
     var navigationPaused by remember { mutableStateOf(startInReadMode) }
     var isMicActive by remember { mutableStateOf(false) }
     var chatResponse by remember { mutableStateOf("") }

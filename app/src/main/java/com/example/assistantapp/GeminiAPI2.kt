@@ -13,7 +13,8 @@ suspend fun sendFrameToGemini2AI(
     try {
         val result = GeminiClient.ask(
             "Read all visible text from this image in natural reading order. Preserve paragraphs and numbers. If no text is legible, say so briefly.",
-            bitmap
+            bitmap,
+            maxOutputTokens = 500
         )
         withContext(Dispatchers.Main) { onPartialResult(result) }
     } catch (error: Exception) {
