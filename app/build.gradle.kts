@@ -17,16 +17,16 @@ val escapedGeminiApiKey = geminiApiKey.replace("\\", "\\\\").replace("\"", "\\\"
 
 android {
     namespace = "com.example.assistantapp"
-    // Compile with the locally available Android SDK platform while targeting Android 15.
-    compileSdk = 36
+    // Compile with Android 15 (API 35) aligned with targetSdk.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.assistantapp"
         // Android 11 (API 30) through Android 15 (API 35).
         minSdk = 30
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 1
+        versionName = "0.0.1"
 
         // Never package a development API key into a release APK.
         buildConfigField("String", "GEMINI_API_KEY", "\"\"")
@@ -45,6 +45,8 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField("String", "GEMINI_API_KEY", "\"$escapedGeminiApiKey\"")
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -108,7 +110,7 @@ dependencies {
     // Gemini REST client
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
-    // Material Icons
+    // Material Icons — core + extended (R8 strips unused icons in release)
     implementation("androidx.compose.material:material-icons-core:1.6.1")
     implementation("androidx.compose.material:material-icons-extended:1.6.1")
     

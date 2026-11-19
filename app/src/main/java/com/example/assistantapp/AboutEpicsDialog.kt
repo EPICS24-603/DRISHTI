@@ -24,7 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -84,9 +84,9 @@ fun AboutEpicsDialog(onDismiss: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        "EPICS Group: 603",
+                        "EPICS Group: 603 • VIT Bhopal",
                         color = ink,
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
@@ -112,7 +112,7 @@ fun AboutEpicsDialog(onDismiss: () -> Unit) {
                     lineHeight = 18.sp
                 )
 
-                Divider(color = Color(0xFFD4E6E1))
+                HorizontalDivider(color = Color(0xFFD4E6E1))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Group, contentDescription = null, tint = teal, modifier = Modifier.size(18.dp))

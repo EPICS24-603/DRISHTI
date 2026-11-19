@@ -1,18 +1,54 @@
-*.iml
-.gradle
-/.idea/
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ============================================================
+# DRISHTI – Android / Gradle .gitignore
+# ============================================================
+
+# ----- Gradle build output -----
+.gradle/
+build/
+**/build/
+out/
+
+# ----- Local developer config (NEVER commit) -----
 local.properties
-/.tools/
-/app/build/
+*.local.properties
+
+# ----- IDE – Android Studio / IntelliJ -----
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# ----- Android generated -----
+/app/release/
+/app/debug/
+
+# Allow published release APK
+!release/*.apk
+!*.apk
+
+# ----- Keystore files (NEVER commit signing keys) -----
+*.jks
+*.keystore
+release.keystore
+keystore.properties
+
+# ----- Kotlin / Java compiled -----
+*.class
+*.jar
+*.aar
+*.ap_
+
+# ----- OS junk -----
+.DS_Store
+*.swp
+*~
+
+# ----- Test results -----
+app/src/androidTest/
+app/src/test/
+
+# ----- NDK / CMake -----
+.externalNativeBuild/
+.cxx/

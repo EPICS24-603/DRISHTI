@@ -19,27 +19,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessibilityNew
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolunteerActivism
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -66,7 +60,6 @@ private val Paper = Color(0xFFF5F7F4)
 @Composable
 fun MainPage(navController: NavHostController) {
     val context = LocalContext.current
-    val helpVisible = remember { mutableStateOf(false) }
     val epicsDialogVisible = remember { mutableStateOf(false) }
     val tts = remember { mutableStateOf<TextToSpeech?>(null) }
 
@@ -106,7 +99,7 @@ fun MainPage(navController: NavHostController) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("DRISHTI", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                    Text("EPICS GROUP 603 • COMMUNITY PROJECT", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("EPICS GROUP 603 • VIT BHOPAL", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
                 IconButton(onClick = { epicsDialogVisible.value = true }) {
                     Icon(Icons.Filled.Info, contentDescription = "EPICS Team Info", tint = Teal)
@@ -192,7 +185,7 @@ fun MainPage(navController: NavHostController) {
                         Text("EPICS Engineering Team (Group 603)", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text("Sumit Prasad, Divyanshu, Bhavya, Faiz, Dhruv", color = Color(0xFF527471), fontSize = 12.sp)
                     }
-                    Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -244,7 +237,7 @@ private fun ModeCard(
                 }
                 Surface(shape = CircleShape, color = Color(0xFFF0F4F3), modifier = Modifier.size(34.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
                     }
                 }
             }
