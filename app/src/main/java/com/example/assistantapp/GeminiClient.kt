@@ -16,12 +16,21 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+enum class AiTask {
+    NAVIGATION,
+    READING,
+    ASSISTANT
+}
+
 /**
- * Optimized Gemini AI client designed for real-time accessibility assistance.
- * Features fast 512px image tile downsampling, token conservation, and runtime API key resolution.
+ * Task-optimized Gemini client that divides and selects the best model for each specific case:
+ * - NAVIGATION: gemini-2.5-flash-lite (fastest inference, lowest latency for obstacle warnings)
+ * - READING: gemini-2.5-flash (highest OCR accuracy for small print, labels, signs)
+ * - ASSISTANT: gemini-2.5-flash (strong reasoning and conversational dialogue)
  */
 object GeminiClient {
-    private const val MODEL = "gemini-3.5-flash-lite"
+    private const val MODEL_FAST = "gemini-2.5-flash-lite"
+    private const val MODEL_ACCURATE = "gemini-2.5-flash"
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
     private val client = OkHttpClient.Builder()
@@ -35,6 +44,7 @@ object GeminiClient {
         prompt: String,
         image: Bitmap? = null,
         maxOutputTokens: Int = 80,
+        task: AiTask = AiTask.NAVIGATION,
         context: Context? = null,
         apiKeyOverride: String? = null
     ): String = withContext(Dispatchers.IO) {
@@ -46,11 +56,39 @@ object GeminiClient {
             throw IllegalStateException("API Key not found. Please tap Settings on the home screen to paste your Gemini API key.")
         }
 
+        // Select the ideal model for each use case
+        val primaryModel = when (task) {
+            AiTask.NAVIGATION -> MODEL_FAST
+            AiTask.READING -> MODEL_ACCURATE
+            AiTask.ASSISTANT -> MODEL_ACCURATE
+        }
+
+        try {
+            executeRequest(primaryModel, apiKey, prompt, image, maxOutputTokens, task)
+        } catch (e: Exception) {
+            // Automatic fallback to accurate model if fast-lite encounters rate limit or temporary outage
+            if (primaryModel != MODEL_ACCURATE) {
+                Log.w("DrishtiAI", "Primary model $primaryModel failed, attempting fallback to $MODEL_ACCURATE", e)
+                executeRequest(MODEL_ACCURATE, apiKey, prompt, image, maxOutputTokens, task)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private fun executeRequest(
+        model: String,
+        apiKey: String,
+        prompt: String,
+        image: Bitmap?,
+        maxOutputTokens: Int,
+        task: AiTask
+    ): String {
         val parts = JSONArray()
         if (image != null) {
-            val uploadImage = scaleForUpload(image)
+            val uploadImage = scaleForUpload(image, task)
             val imageBytes = ByteArrayOutputStream().use { output ->
-                uploadImage.compress(Bitmap.CompressFormat.JPEG, 75, output)
+                uploadImage.compress(Bitmap.CompressFormat.JPEG, if (task == AiTask.READING) 85 else 75, output)
                 output.toByteArray()
             }
             parts.put(
@@ -63,13 +101,19 @@ object GeminiClient {
         }
         parts.put(JSONObject().put("text", prompt))
 
+        val systemPrompt = when (task) {
+            AiTask.NAVIGATION -> SYSTEM_PROMPT_NAV
+            AiTask.READING -> SYSTEM_PROMPT_READING
+            AiTask.ASSISTANT -> SYSTEM_PROMPT_ASSISTANT
+        }
+
         val body = JSONObject()
-            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", SYSTEM_PROMPT))))
+            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", systemPrompt))))
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts)))
-            .put("generationConfig", JSONObject().put("temperature", 0.15).put("maxOutputTokens", maxOutputTokens.coerceIn(32, 256)))
+            .put("generationConfig", JSONObject().put("temperature", if (task == AiTask.READING) 0.05 else 0.15).put("maxOutputTokens", maxOutputTokens.coerceIn(32, 512)))
 
         val request = Request.Builder()
-            .url("$BASE_URL/$MODEL:generateContent?key=$apiKey")
+            .url("$BASE_URL/$model:generateContent?key=$apiKey")
             .header("Content-Type", "application/json")
             .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
@@ -77,12 +121,12 @@ object GeminiClient {
         client.newCall(request).execute().use { response ->
             val responseText = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
-                Log.w("DrishtiAI", "Gemini request failed with HTTP ${response.code}: $responseText")
+                Log.w("DrishtiAI", "Gemini request on $model failed with HTTP ${response.code}: $responseText")
                 throw IOException(when (response.code) {
-                    400 -> "The AI could not process that frame. Retrying."
-                    401, 403 -> "Invalid API key. Please check the key in Settings."
-                    429 -> "Rate limit reached. Pausing momentarily."
-                    in 500..599 -> "AI service busy. Retrying shortly."
+                    400 -> "Request could not be processed. Please try again."
+                    401, 403 -> "Invalid API key. Please check your key in Settings."
+                    429 -> "AI rate limit reached. Pausing momentarily."
+                    in 500..599 -> "AI service temporarily unavailable. Retrying."
                     else -> "Connection error (${response.code})."
                 })
             }
@@ -93,30 +137,29 @@ object GeminiClient {
                     append(responseParts.optJSONObject(index)?.optString("text").orEmpty())
                 }
             }.trim()
-            answer.ifBlank { "Path is clear ahead." }
+            return answer.ifBlank {
+                if (task == AiTask.READING) "No legible text found." else "Path is clear ahead."
+            }
         }
     }
 
-    /**
-     * Verifies if a given Gemini API key is valid and working.
-     */
     suspend fun testConnection(apiKey: String): Result<String> = withContext(Dispatchers.IO) {
         val key = apiKey.trim()
         if (key.isBlank()) return@withContext Result.failure(IllegalArgumentException("API Key cannot be blank."))
         try {
             val body = JSONObject()
-                .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", "Say OK")))))
+                .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", "ping")))))
                 .put("generationConfig", JSONObject().put("maxOutputTokens", 5))
 
             val request = Request.Builder()
-                .url("$BASE_URL/$MODEL:generateContent?key=$key")
+                .url("$BASE_URL/$MODEL_ACCURATE:generateContent?key=$key")
                 .header("Content-Type", "application/json")
                 .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
                 .build()
 
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    Result.success("Connection Successful! Model is active and responsive.")
+                    Result.success("Connection Successful! Gemini 2.5 Flash is active and verified.")
                 } else {
                     Result.failure(IOException("Verification failed with HTTP ${response.code}. Check the key."))
                 }
@@ -126,15 +169,12 @@ object GeminiClient {
         }
     }
 
-    /**
-     * Scales image to max dimension 512px.
-     * Fits in 1 single Gemini vision tile (258 tokens), cuts upload size by ~80%,
-     * and speeds up response time significantly while keeping text/objects crisp.
-     */
-    private fun scaleForUpload(bitmap: Bitmap): Bitmap {
+    private fun scaleForUpload(bitmap: Bitmap, task: AiTask): Bitmap {
+        // Navigation uses ultra-fast 512px tile; Reading uses 768px for fine text resolution
+        val maxDim = if (task == AiTask.READING) 768f else 512f
         val longestSide = maxOf(bitmap.width, bitmap.height)
-        if (longestSide <= 512) return bitmap
-        val scale = 512f / longestSide
+        if (longestSide <= maxDim) return bitmap
+        val scale = maxDim / longestSide
         return Bitmap.createScaledBitmap(
             bitmap,
             (bitmap.width * scale).toInt().coerceAtLeast(1),
@@ -143,12 +183,22 @@ object GeminiClient {
         )
     }
 
-    private val SYSTEM_PROMPT = """
-        You are DRISHTI, an urgent, calm visual assistant for a blind person walking in real-time.
+    private val SYSTEM_PROMPT_NAV = """
+        You are DRISHTI, a real-time visual safety assistant for a walking blind person.
         RULES:
-        1. Keep answers strictly under 2 short sentences.
-        2. Immediate hazards (stairs, obstacles, holes, moving objects, drop-offs) must be reported FIRST with clock direction (e.g. "Step down 2 feet ahead", "Chair at 11 o'clock").
+        1. Keep responses strictly under 2 short sentences.
+        2. Immediate hazards (stairs, obstacles, holes, moving objects, drop-offs) must be reported FIRST with clock position (e.g. "Step down 2 feet ahead", "Chair at 11 o'clock").
         3. Give 1 direct actionable guidance (e.g. "Walk straight", "Veer slightly right").
         4. Never guess or say an unconfirmed area is safe.
+    """.trimIndent()
+
+    private val SYSTEM_PROMPT_READING = """
+        You are DRISHTI OCR reader. Transcribe all visible text from the image accurately in natural reading order.
+        Preserve numbers, labels, signs, and headings. If text is unreadable or blurry, say 'Text is blurry. Please hold camera closer.'
+    """.trimIndent()
+
+    private val SYSTEM_PROMPT_ASSISTANT = """
+        You are DRISHTI, an intelligent conversational assistant for the visually impaired.
+        Provide calm, concise, and helpful answers to the user's questions about their environment or general queries.
     """.trimIndent()
 }

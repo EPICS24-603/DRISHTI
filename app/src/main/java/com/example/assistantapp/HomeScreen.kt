@@ -106,7 +106,7 @@ fun MainPage(navController: NavHostController) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("DRISHTI", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                    Text("EPICS COMMUNITY PROJECT", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("EPICS GROUP 603 • COMMUNITY PROJECT", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
                 IconButton(onClick = { epicsDialogVisible.value = true }) {
                     Icon(Icons.Filled.Info, contentDescription = "EPICS Team Info", tint = Teal)
@@ -189,7 +189,7 @@ fun MainPage(navController: NavHostController) {
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("EPICS Engineering Team", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("EPICS Engineering Team (Group 603)", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text("Sumit Prasad, Divyanshu, Bhavya, Faiz, Dhruv", color = Color(0xFF527471), fontSize = 12.sp)
                     }
                     Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))

@@ -48,8 +48,8 @@ val EPICS_TEAM = listOf(
     TeamMember("Divyanshu Karma", "24BET10016", "SCOPE", "XYZ"),
     TeamMember("Bhavya Manish Jain", "24BSA10295", "SCAI", "XYZ"),
     TeamMember("FAIZ KHAN", "24BCE10703", "SCOPE", "XYZ"),
-    TeamMember("Dhruv Chandwani", "24BCE10804", "SCOPE", "XYZ")
-    TeamMember("Ronit Choudhury","24BCE11521","scope)
+    TeamMember("Dhruv Chandwani", "24BCE10804", "SCOPE", "XYZ"),
+    TeamMember("Ronit Choudhury","24BCE11521","SCOPE","xyz")
 )
 
 @Composable
@@ -84,7 +84,7 @@ fun AboutEpicsDialog(onDismiss: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        "EPICS Project",
+                        "EPICS Group: 603",
                         color = ink,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold

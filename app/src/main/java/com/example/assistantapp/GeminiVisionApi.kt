@@ -14,14 +14,15 @@ suspend fun analyzeNavigationFrame(
 ) {
     try {
         val result = GeminiClient.ask(
-            prompt = "Briefly describe the scene ahead. Mention any immediate obstacle or hazard first with direction, then one short actionable instruction. Keep it strictly under two short spoken sentences.",
+            prompt = "Describe the immediate path ahead. Name the nearest hazard/obstacle with clock direction first, then one clear action. Under two short sentences.",
             image = bitmap,
             maxOutputTokens = 70,
+            task = AiTask.NAVIGATION,
             context = context
         )
         withContext(Dispatchers.Main) { onPartialResult(result) }
     } catch (error: Exception) {
-        Log.e("DrishtiAI", "Image analysis failed", error)
-        withContext(Dispatchers.Main) { onError(error.message ?: "Could not analyze the image. Please try again.") }
+        Log.e("DrishtiAI", "Navigation analysis failed", error)
+        withContext(Dispatchers.Main) { onError(error.message ?: "Could not analyze the image.") }
     }
 }
