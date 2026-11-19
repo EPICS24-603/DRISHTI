@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -27,17 +29,21 @@ fun CameraPreviewWithAnalysis(onImageCaptured: (ImageProxy) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
-    val preview = Preview.Builder().build()
-    val previewView = PreviewView(context)
+    val currentOnImageCaptured = rememberUpdatedState(onImageCaptured)
+    val preview = remember { Preview.Builder().build() }
+    val previewView = remember(context) { PreviewView(context) }
+    val analyzerExecutor = remember { Executors.newSingleThreadExecutor() }
 
-    val imageAnalysis = ImageAnalysis.Builder()
-        .setTargetResolution(Size(640, 480))
-        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-        .build()
-        .also {
-            it.setAnalyzer(Executors.newSingleThreadExecutor(), ImageAnalysis.Analyzer { imageProxy ->
-                onImageCaptured(imageProxy)
-            })
+    val imageAnalysis = remember(analyzerExecutor) {
+        ImageAnalysis.Builder()
+            .setTargetResolution(Size(640, 480))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also { analysis ->
+                analysis.setAnalyzer(analyzerExecutor, ImageAnalysis.Analyzer { imageProxy ->
+                    currentOnImageCaptured.value(imageProxy)
+                })
+            }
         }
 
     LaunchedEffect(cameraProviderFuture) {
@@ -55,6 +61,14 @@ fun CameraPreviewWithAnalysis(onImageCaptured: (ImageProxy) -> Unit) {
             )
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    DisposableEffect(cameraProviderFuture, imageAnalysis, analyzerExecutor) {
+        onDispose {
+            cameraProviderFuture.get().unbind(preview, imageAnalysis)
+            imageAnalysis.clearAnalyzer()
+            analyzerExecutor.shutdown()
         }
     }
 

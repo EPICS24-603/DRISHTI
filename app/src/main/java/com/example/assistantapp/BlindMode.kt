@@ -147,7 +147,11 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                 if (!matches.isNullOrEmpty()) {
                     val spokenText = matches[0]
                     coroutineScope.launch {
-                        chatResponse = sendMessageToGeminiAI(spokenText, analysisResult)
+                        chatResponse = try {
+                            sendMessageToGeminiAI(spokenText, analysisResult)
+                        } catch (error: Exception) {
+                            error.message ?: "I could not get an answer. Please try again."
+                        }
                         tts.value?.speak(chatResponse, TextToSpeech.QUEUE_FLUSH, null, null)
                     }
                 }
@@ -158,12 +162,12 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {
-                if (navigationPaused) {
+                if (navigationPaused && !isVoiceMode) {
                     speechRecognizer.startListening(speechIntent)
                 }
             }
             override fun onError(error: Int) {
-                if (navigationPaused) {
+                if (navigationPaused && !isVoiceMode) {
                     speechRecognizer.startListening(speechIntent)
                 }
             }
@@ -173,8 +177,8 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
     }
 
     // Effect to handle microphone activation when navigation is paused
-    LaunchedEffect(navigationPaused) {
-        if (navigationPaused) {
+    LaunchedEffect(navigationPaused, isVoiceMode) {
+        if (navigationPaused && !isVoiceMode) {
             isMicActive = true
             speechRecognizer.startListening(speechIntent)
         } else {
@@ -207,9 +211,11 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                 CameraPreviewWithAnalysis { imageProxy ->
                     val currentTimestamp = System.currentTimeMillis()
                     if (currentTimestamp - lastProcessedTimestamp >= frameInterval) {
-                        coroutineScope.launch {
-                            val bitmap = imageProxy.toBitmap()
-                            if (bitmap != null) {
+                        val bitmap = imageProxy.toBitmap()
+                        imageProxy.close()
+                        lastProcessedTimestamp = currentTimestamp
+                        if (bitmap != null) {
+                            coroutineScope.launch {
                                 sendFrameToGeminiAI(bitmap, { partialResult ->
                                     analysisResult += " $partialResult"
                                     val newText = analysisResult.substring(lastSpokenIndex)
@@ -218,9 +224,7 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                                 }, { error ->
                                     tts.value?.speak("Error analyzing image. Please try again.", TextToSpeech.QUEUE_FLUSH, null, null)
                                 })
-                                lastProcessedTimestamp = currentTimestamp
                             }
-                            imageProxy.close()
                         }
                     } else {
                         imageProxy.close()
@@ -435,19 +439,20 @@ fun VoiceModeCamera(
         preview.setSurfaceProvider(previewView.surfaceProvider)
 
         // Capture image once when voice mode is activated
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(createTempFile(context.toString())).build()
+        val captureFile = java.io.File.createTempFile("drishti-capture-", ".jpg", context.cacheDir)
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(captureFile).build()
         imageCapture.takePicture(
             outputOptions,
             cameraExecutor,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    val savedUri = outputFileResults.savedUri ?: return
-                    val bitmap = BitmapFactory.decodeFile(savedUri.path)
-                    onImageCaptured(bitmap)
+                    val bitmap = BitmapFactory.decodeFile(captureFile.absolutePath)
+                    captureFile.delete()
+                    if (bitmap != null) onImageCaptured(bitmap)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    // Handle error
+                    captureFile.delete()
                 }
             }
         )

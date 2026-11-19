@@ -5,7 +5,7 @@ plugins {
 
 val localProperties = java.util.Properties().apply {
     val propertiesFile = rootProject.file("local.properties")
-    if (propertiesFile.exists()) propertiesFile.inputStream().use(::load)
+    if (propertiesFile.exists()) propertiesFile.inputStream().use { load(it) }
 }
 val geminiApiKey = providers.gradleProperty("GEMINI_API_KEY").orNull
     ?: System.getenv("GEMINI_API_KEY")

@@ -35,14 +35,14 @@ object GeminiClient {
                 image.compress(Bitmap.CompressFormat.JPEG, 82, output)
                 output.toByteArray()
             }
-            parts.put(JSONObject().put("inline_data", JSONObject()
-                .put("mime_type", "image/jpeg")
+            parts.put(JSONObject().put("inlineData", JSONObject()
+                .put("mimeType", "image/jpeg")
                 .put("data", Base64.encodeToString(imageBytes, Base64.NO_WRAP))))
         }
         parts.put(JSONObject().put("text", prompt))
 
         val body = JSONObject()
-            .put("system_instruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", SYSTEM_PROMPT))))
+            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", SYSTEM_PROMPT))))
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts)))
             .put("generationConfig", JSONObject().put("temperature", 0.25).put("maxOutputTokens", 220))
 
