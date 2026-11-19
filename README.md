@@ -1,6 +1,9 @@
 # DRISHTI
 
-DRISHTI is an Android accessibility assistant built by VIT Bhopal Group 36. It combines camera based scene descriptions, spoken questions, and text reading with speech output.
+> **EPICS Group 603 • VIT Bhopal**  
+> 📥 **Latest Release**: [**Download DRISHTI v0.0.1 APK (3.18 MB)**](https://github.com/EPICS24-603/DRISHTI/raw/main/release/DRISHTI-v0.0.1.apk) • [Release Notes](RELEASE_NOTES.md)
+
+DRISHTI is an Android accessibility assistant built by **VIT Bhopal EPICS Group 603**. It combines camera-based real-time obstacle & hazard detection, spoken voice assistant Q&A, and high-accuracy text reading aloud with speech output.
 
 ## Features
 

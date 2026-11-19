@@ -44,8 +44,16 @@ DRISHTI is an AI-powered Android accessibility app for the visually impaired, bu
 
 ---
 
-## Install
+## 📥 Download & Install
 
-Download `DRISHTI-v0.0.1.apk` from the Assets below, enable **Install from unknown sources**, and sideload the APK.
+* 📲 **Direct APK Download**: [**Download DRISHTI-v0.0.1.apk (3.18 MB)**](https://github.com/EPICS24-603/DRISHTI/raw/main/release/DRISHTI-v0.0.1.apk)
+* 📂 **Repository File**: [release/DRISHTI-v0.0.1.apk](https://github.com/EPICS24-603/DRISHTI/blob/main/release/DRISHTI-v0.0.1.apk)
+* 🏷️ **GitHub Tag**: [`v0.0.1`](https://github.com/EPICS24-603/DRISHTI/releases/tag/v0.0.1)
 
-> ⚠️ Requires a Gemini API key — paste it in the app's Settings screen on first launch.
+### Installation Steps:
+1. Click the download link above on your Android device (or transfer the APK via USB/Drive).
+2. Enable **"Install from unknown sources"** in your Android Settings if prompted.
+3. Open `DRISHTI-v0.0.1.apk` and tap **Install**.
+4. Launch DRISHTI, tap the **Settings** icon in the top right, and paste your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+> ⚠️ Requires Android 11+ (API 30+) and a Gemini API key.
