@@ -3,6 +3,16 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+val localProperties = java.util.Properties().apply {
+    val propertiesFile = rootProject.file("local.properties")
+    if (propertiesFile.exists()) propertiesFile.inputStream().use(::load)
+}
+val geminiApiKey = providers.gradleProperty("GEMINI_API_KEY").orNull
+    ?: System.getenv("GEMINI_API_KEY")
+    ?: localProperties.getProperty("GEMINI_API_KEY")
+    ?: ""
+val escapedGeminiApiKey = geminiApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
+
 android {
     namespace = "com.example.assistantapp"
     compileSdk = 35
@@ -13,6 +23,8 @@ android {
         targetSdk = 35
         versionCode = 2
         versionName = "1.1"
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"$escapedGeminiApiKey\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -41,6 +53,7 @@ android {
     
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     
     composeOptions {
@@ -78,8 +91,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.1")
     implementation("androidx.camera:camera-view:1.3.1")
     
-    // AI and HTTP
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    // Gemini REST client
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
     // Material Icons
