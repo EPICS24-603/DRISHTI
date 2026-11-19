@@ -6,25 +6,57 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.os.VibrationEffect
-import android.os.Vibrator
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,48 +65,51 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import kotlinx.coroutines.launch
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 @Composable
-fun BlindModeScreen(startInReadMode: Boolean = false) {
+fun BlindModeScreen(
+    startInReadMode: Boolean = false,
+    navController: NavHostController? = null
+) {
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val context = LocalContext.current
     var hasPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED &&
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.RECORD_AUDIO
-                    ) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         )
     }
+
     var currentMode by remember { mutableStateOf(if (startInReadMode) "reading" else "navigation") }
     val coroutineScope = rememberCoroutineScope()
     var isAssistantMode by remember { mutableStateOf(false) }
     var sessionStarted by remember { mutableStateOf(true) }
     var analysisResult by remember { mutableStateOf("") }
     val tts = remember { mutableStateOf<TextToSpeech?>(null) }
-    var lastSpokenIndex by remember { mutableStateOf(0) }
     var lastProcessedTimestamp by remember { mutableStateOf(0L) }
-    // A conservative rate keeps the free API quota usable during a navigation session.
-    val frameInterval = 6000L
+    
+    // Configurable navigation cadence (default 3s instead of 6s)
+    val frameInterval = remember { AppPreferences.getNavIntervalMs(context) }
+    val motionDetector = remember { MotionDetector() }
+    val motionFilterEnabled = remember { AppPreferences.isMotionFilterEnabled(context) }
+    var isAnalyzing by remember { mutableStateOf(false) }
+
     var navigationPaused by remember { mutableStateOf(startInReadMode) }
     var isMicActive by remember { mutableStateOf(false) }
     var chatResponse by remember { mutableStateOf("") }
     var isVoiceMode by remember { mutableStateOf(startInReadMode) }
     var voiceModeResult by remember { mutableStateOf("") }
     var showInstructions by remember { mutableStateOf(true) }
+
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         hasPermission = grants.values.all { it }
     }
@@ -87,33 +122,26 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
         }
     }
 
-    // Initialize TTS with better settings for blind users
     LaunchedEffect(context) {
         tts.value = TextToSpeech(context) { status ->
             if (status != TextToSpeech.ERROR) {
                 tts.value?.language = Locale.US
-                tts.value?.setSpeechRate(0.8f) // Slower for clarity
-                tts.value?.setPitch(1.0f) // Normal pitch
+                tts.value?.setSpeechRate(0.92f)
+                tts.value?.setPitch(1.0f)
             }
         }
     }
 
-    // Welcome and instruction system
     LaunchedEffect(Unit) {
+        delay(600)
         if (tts.value != null) {
-            tts.value?.speak(
-                "Welcome to DRISHTI Navigation Mode. " +
-                "This mode provides real-time guidance using your camera. " +
-                "Tap the top of the screen to pause navigation and ask questions. " +
-                "Tap the bottom to switch to text reading mode. " +
-                "Tap the center to hear current status. " +
-                "Navigation will start automatically in 3 seconds.",
-                TextToSpeech.QUEUE_FLUSH, null, null
-            )
-            
-            // Start navigation after 3 seconds
-            kotlinx.coroutines.delay(3000)
-            tts.value?.speak("Navigation started. I will describe your surroundings every 6 seconds.", TextToSpeech.QUEUE_FLUSH, null, null)
+            val intervalSec = frameInterval / 1000
+            val welcomeText = if (startInReadMode) {
+                "Text Reading mode activated. Point camera at documents, signs, or labels."
+            } else {
+                "Navigation started. Real-time guidance every $intervalSec seconds. Tap top for assistant, bottom for text reader."
+            }
+            tts.value?.speak(welcomeText, TextToSpeech.QUEUE_FLUSH, null, null)
         }
     }
 
@@ -126,11 +154,6 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
             tts.value?.stop()
             tts.value?.shutdown()
             speechRecognizer.destroy()
@@ -145,37 +168,28 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                     val spokenText = matches[0]
                     coroutineScope.launch {
                         chatResponse = try {
-                            askDrishti(spokenText, analysisResult)
+                            askDrishti(spokenText, analysisResult, context = context)
                         } catch (error: Exception) {
                             error.message ?: "I could not get an answer. Please try again."
                         }
                         tts.value?.speak(chatResponse, TextToSpeech.QUEUE_FLUSH, null, null)
                     }
                 }
+                isMicActive = false
             }
-
-            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onReadyForSpeech(params: Bundle?) { isMicActive = true }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {
-                if (navigationPaused && !isVoiceMode) {
-                    speechRecognizer.startListening(speechIntent)
-                }
-            }
-            override fun onError(error: Int) {
-                if (navigationPaused && !isVoiceMode) {
-                    speechRecognizer.startListening(speechIntent)
-                }
-            }
+            override fun onEndOfSpeech() { isMicActive = false }
+            override fun onError(error: Int) { isMicActive = false }
             override fun onPartialResults(partialResults: Bundle?) {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
     }
 
-    // Effect to handle microphone activation when navigation is paused
-    LaunchedEffect(navigationPaused, isVoiceMode) {
-        if (navigationPaused && !isVoiceMode) {
+    LaunchedEffect(isAssistantMode) {
+        if (isAssistantMode) {
             isMicActive = true
             speechRecognizer.startListening(speechIntent)
         } else {
@@ -192,13 +206,13 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                     onImageCaptured = { bitmap: Bitmap ->
                         coroutineScope.launch {
                             voiceModeResult = ""
-                            tts.value?.speak("Processing text. Please wait.", TextToSpeech.QUEUE_FLUSH, null, null)
-                            readTextFromFrame(bitmap, { partialResult ->
-                                voiceModeResult += partialResult
-                                tts.value?.speak(partialResult, TextToSpeech.QUEUE_ADD, null, null)
+                            tts.value?.speak("Reading text. Please hold still.", TextToSpeech.QUEUE_FLUSH, null, null)
+                            readTextFromFrame(bitmap, { text ->
+                                voiceModeResult = text
+                                tts.value?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
                             }, { error ->
-                                tts.value?.speak("Error processing text. Please try again.", TextToSpeech.QUEUE_FLUSH, null, null)
-                            })
+                                tts.value?.speak("Could not read text. Please hold camera closer.", TextToSpeech.QUEUE_FLUSH, null, null)
+                            }, context = context)
                         }
                     },
                     cameraExecutor = cameraExecutor
@@ -206,19 +220,28 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
             } else if (!navigationPaused) {
                 CameraPreviewWithAnalysis { imageProxy ->
                     val currentTimestamp = System.currentTimeMillis()
-                    if (currentTimestamp - lastProcessedTimestamp >= frameInterval) {
+                    if (!isAnalyzing && currentTimestamp - lastProcessedTimestamp >= frameInterval) {
                         val bitmap = imageProxy.toBitmap()
                         imageProxy.close()
-                        lastProcessedTimestamp = currentTimestamp
-                        coroutineScope.launch {
-                            analyzeNavigationFrame(bitmap, { partialResult ->
-                                analysisResult += " $partialResult"
-                                val newText = analysisResult.substring(lastSpokenIndex)
-                                tts.value?.speak(newText, TextToSpeech.QUEUE_ADD, null, null)
-                                lastSpokenIndex = analysisResult.length
-                            }, {
-                                tts.value?.speak("Error analyzing image. Please try again.", TextToSpeech.QUEUE_FLUSH, null, null)
-                            })
+                        if (bitmap != null) {
+                            // Smart Token Optimization: Skip redundant analysis if camera is static
+                            val shouldAnalyze = !motionFilterEnabled || motionDetector.hasSceneChanged(bitmap)
+                            if (shouldAnalyze) {
+                                lastProcessedTimestamp = currentTimestamp
+                                isAnalyzing = true
+                                coroutineScope.launch {
+                                    try {
+                                        analyzeNavigationFrame(bitmap, { result ->
+                                            analysisResult = result
+                                            tts.value?.speak(result, TextToSpeech.QUEUE_FLUSH, null, null)
+                                        }, {
+                                            // Silently ignore transient errors
+                                        }, context = context)
+                                    } finally {
+                                        isAnalyzing = false
+                                    }
+                                }
+                            }
                         }
                     } else {
                         imageProxy.close()
@@ -228,8 +251,8 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
         }
     }
 
-    // Main UI with simple, accessible controls
-    Column(
+    // Accessible Screen Layout
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -237,77 +260,51 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                     onTap = { offset ->
                         val screenHeight = size.height
                         val y = offset.y
-                        
+                        val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
+
                         when {
                             y < screenHeight * 0.33 -> {
                                 // Top third - Toggle Assistant Mode
                                 if (!isVoiceMode) {
                                     navigationPaused = !navigationPaused
                                     isAssistantMode = navigationPaused
-                                    
-                                    // Haptic feedback
-                                    val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
-                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                        vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        vibrator.vibrate(100)
-                                    }
-                                    
+                                    vibrate(vibrator, 100)
                                     if (navigationPaused) {
                                         tts.value?.stop()
                                         currentMode = "assistant"
-                                        tts.value?.speak("Assistant mode activated. Ask me anything about your environment.", TextToSpeech.QUEUE_FLUSH, null, null)
+                                        tts.value?.speak("Assistant mode activated. Speak your question.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     } else {
                                         tts.value?.stop()
                                         currentMode = "navigation"
                                         chatResponse = ""
-                                        tts.value?.speak("Assistant mode deactivated. Navigation resumed.", TextToSpeech.QUEUE_FLUSH, null, null)
+                                        tts.value?.speak("Navigation resumed.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     }
                                 }
                             }
                             y > screenHeight * 0.66 -> {
-                                // Bottom third - Toggle Voice Mode
+                                // Bottom third - Toggle Reading Mode
                                 if (!isAssistantMode) {
                                     isVoiceMode = !isVoiceMode
-                                    
-                                    // Haptic feedback
-                                    val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
-                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                        vibrator.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        vibrator.vibrate(200)
-                                    }
-                                    
+                                    vibrate(vibrator, 200)
                                     if (isVoiceMode) {
                                         tts.value?.stop()
                                         currentMode = "reading"
                                         navigationPaused = true
-                                        tts.value?.speak("Voice mode activated. Point your camera at text to read it.", TextToSpeech.QUEUE_FLUSH, null, null)
+                                        tts.value?.speak("Text reader activated. Point at text to hear it.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     } else {
                                         tts.value?.stop()
                                         currentMode = "navigation"
                                         voiceModeResult = ""
                                         navigationPaused = false
-                                        tts.value?.speak("Voice mode deactivated. Navigation resumed.", TextToSpeech.QUEUE_FLUSH, null, null)
+                                        tts.value?.speak("Navigation resumed.", TextToSpeech.QUEUE_FLUSH, null, null)
                                     }
                                 }
                             }
                             else -> {
-                                // Middle third - Status and instructions
-                                val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                    vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    vibrator.vibrate(50)
-                                }
-                                
+                                // Middle third - Status readout
+                                vibrate(vibrator, 50)
                                 tts.value?.speak(
-                                    "Current mode: $currentMode. " +
-                                    "Top tap: Assistant mode. Bottom tap: Voice mode. " +
-                                    "Navigation is ${if (navigationPaused) "paused" else "active"}.",
+                                    "Current mode: $currentMode. Navigation is ${if (navigationPaused) "paused" else "active"}.",
                                     TextToSpeech.QUEUE_FLUSH, null, null
                                 )
                             }
@@ -316,82 +313,94 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
                 )
             }
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
+        if (sessionStarted) {
+            AIResponseOverlay(
+                currentMode = currentMode,
+                navigationResponse = analysisResult,
+                response = analysisResult,
+                chatResponse = chatResponse,
+                readingModeResult = voiceModeResult,
+                tts = tts.value,
+                lastSpokenIndex = 0
+            )
+        }
+
+        // Top Navigation Bar with Back Button
+        if (navController != null) {
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.TopStart)
+                    .size(46.dp)
+            ) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Exit to Home", tint = Color.White)
+                }
+            }
+        }
+
+        // Live Mode Pill at Top Center
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = Color.Black.copy(alpha = 0.65f),
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .align(Alignment.TopCenter)
         ) {
-            if (sessionStarted) {
-                AIResponseOverlay(
-                    currentMode = currentMode,
-                    navigationResponse = analysisResult,
-                    response = analysisResult,
-                    chatResponse = chatResponse,
-                    readingModeResult = voiceModeResult,
-                    tts = tts.value,
-                    lastSpokenIndex = lastSpokenIndex
-                )
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val icon = if (isVoiceMode) Icons.Filled.Book else Icons.Filled.Navigation
+                val label = if (isVoiceMode) "READ TEXT MODE" else if (navigationPaused) "ASSISTANT PAUSED" else "LIVE NAVIGATION"
+                Icon(icon, contentDescription = null, tint = Color(0xFF80CBC4), modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
-            
-            // Simple visual indicators (minimal for blind users)
-            if (isVoiceMode) {
-                Icon(
-                    imageVector = Icons.Filled.Book,
-                    contentDescription = "Voice Mode Active",
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .size(48.dp),
-                    tint = Color.Green
-                )
+        }
+
+        // Status Indicators
+        if (isMicActive) {
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFF00C853),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 20.dp)
+                    .size(54.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Mic, contentDescription = "Listening", tint = Color.White, modifier = Modifier.size(28.dp))
+                }
             }
-            
-            if (isMicActive) {
-                Icon(
-                    imageVector = Icons.Filled.Mic,
-                    contentDescription = "Microphone Active",
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(48.dp),
-                    tint = Color.Green
-                )
-            }
-            
-            // Instructions overlay
-            if (showInstructions) {
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                    )
+        }
+
+        // First-run instructions overlay
+        if (showInstructions) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(20.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xF0102A2A))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Text("DRISHTI Touch Controls", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("• Tap TOP: Pause & Ask questions by voice", color = Color(0xFFB2DFDB), fontSize = 13.sp)
+                    Text("• Tap CENTER: Speak current status", color = Color(0xFFB2DFDB), fontSize = 13.sp)
+                    Text("• Tap BOTTOM: Switch to Read Text mode", color = Color(0xFFB2DFDB), fontSize = 13.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = { showInstructions = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B))
                     ) {
-                        Text(
-                            text = "DRISHTI Navigation Controls",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "• Tap TOP: Assistant Mode (ask questions)",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "• Tap CENTER: Status & Instructions",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "• Tap BOTTOM: Voice Mode (read text)",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(
-                            onClick = { showInstructions = false }
-                        ) {
-                            Text("Got it!")
-                        }
+                        Text("Start Navigation", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -399,7 +408,14 @@ fun BlindModeScreen(startInReadMode: Boolean = false) {
     }
 }
 
-
+private fun vibrate(vibrator: Vibrator, ms: Long) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(ms)
+    }
+}
 
 @Composable
 fun VoiceModeCamera(
@@ -408,7 +424,6 @@ fun VoiceModeCamera(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture = remember {
@@ -428,7 +443,6 @@ fun VoiceModeCamera(
         )
         preview.setSurfaceProvider(previewView.surfaceProvider)
 
-        // Capture image once when voice mode is activated
         val captureFile = java.io.File.createTempFile("drishti-capture-", ".jpg", context.cacheDir)
         val outputOptions = ImageCapture.OutputFileOptions.Builder(captureFile).build()
         imageCapture.takePicture(
@@ -450,4 +464,3 @@ fun VoiceModeCamera(
 
     AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
 }
-

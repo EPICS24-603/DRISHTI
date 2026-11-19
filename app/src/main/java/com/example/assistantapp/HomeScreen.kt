@@ -25,12 +25,17 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,7 +67,12 @@ private val Paper = Color(0xFFF5F7F4)
 fun MainPage(navController: NavHostController) {
     val context = LocalContext.current
     val helpVisible = remember { mutableStateOf(false) }
+    val epicsDialogVisible = remember { mutableStateOf(false) }
     val tts = remember { mutableStateOf<TextToSpeech?>(null) }
+
+    if (epicsDialogVisible.value) {
+        AboutEpicsDialog(onDismiss = { epicsDialogVisible.value = false })
+    }
 
     LaunchedEffect(Unit) {
         tts.value = TextToSpeech(context) { status ->
@@ -81,73 +91,112 @@ fun MainPage(navController: NavHostController) {
 
     Box(Modifier.fillMaxSize().background(Paper)) {
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
+            
+            // Top Bar
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = Mint, modifier = Modifier.size(48.dp)) {
+                Surface(shape = CircleShape, color = Mint, modifier = Modifier.size(46.dp)) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.AccessibilityNew, contentDescription = null, tint = Teal, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Filled.AccessibilityNew, contentDescription = null, tint = Teal, modifier = Modifier.size(26.dp))
                     }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("DRISHTI", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                    Text("YOUR WORLD, WITH MORE CLARITY", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("DRISHTI", color = Ink, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                    Text("EPICS COMMUNITY PROJECT", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
-                TextButton(onClick = { helpVisible.value = true }) {
-                    Icon(Icons.Filled.HelpOutline, contentDescription = "Open help", tint = Ink)
+                IconButton(onClick = { epicsDialogVisible.value = true }) {
+                    Icon(Icons.Filled.Info, contentDescription = "EPICS Team Info", tint = Teal)
+                }
+                IconButton(onClick = { navController.navigate("settings") }) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Open Settings", tint = Ink)
                 }
             }
 
+            // Hero Banner
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(Color(0xFF123837), Color(0xFF176B65))), RoundedCornerShape(28.dp))
-                    .padding(24.dp),
+                    .background(Brush.linearGradient(listOf(Color(0xFF103635), Color(0xFF146A64))), RoundedCornerShape(26.dp))
+                    .padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(50)) {
-                    Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color(0xFFBCEADF), modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(7.dp))
-                        Text("AI ASSISTANCE, MADE ACCESSIBLE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(50)) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color(0xFFBCEADF), modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("POWERED BY GEMINI AI", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
                     }
                 }
-                Text("Move through\nyour day with confidence.", color = Color.White, fontSize = 29.sp, lineHeight = 35.sp, fontWeight = FontWeight.Bold)
-                Text("Choose a tool to understand what’s around you, ask a question, or read printed text aloud.", color = Color(0xFFE1F2ED), fontSize = 15.sp, lineHeight = 22.sp)
+                Text("Your world, with more clarity.", color = Color.White, fontSize = 27.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold)
+                Text("Select one of the 3 accessibility modes below for real-time guidance, voice questions, or text reading.", color = Color(0xFFE1F2ED), fontSize = 14.sp, lineHeight = 20.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Headphones, contentDescription = null, tint = Color(0xFFBCEADF), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Headphones, contentDescription = null, tint = Color(0xFFBCEADF), modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Voice guidance is available throughout the app", color = Color.White, fontSize = 12.sp)
+                    Text("High-contrast and voice-guided assistance", color = Color.White, fontSize = 12.sp)
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("CHOOSE A MODE", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp)
+            // The 3 Distinct Modes
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("3 ACCESSIBILITY MODES", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+                    Spacer(Modifier.weight(1f))
+                    Text("TAP TO START", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
                 ModeCard(
                     icon = Icons.Filled.CameraAlt,
-                    title = "Live navigation",
-                    description = "Hear a short description of the scene ahead.",
-                    badge = "CAMERA",
+                    title = "Mode 1: AI Navigation",
+                    description = "Fast real-time obstacle & hazard detection with directional speech guidance.",
+                    badge = "LIVE CAMERA",
+                    badgeColor = Color(0xFF00796B),
                     onClick = { navController.navigate("blindMode") }
                 )
                 ModeCard(
                     icon = Icons.Filled.Mic,
-                    title = "Ask DRISHTI",
-                    description = "Ask a question by voice and hear the answer.",
-                    badge = "VOICE",
+                    title = "Mode 2: AI Voice Assistant",
+                    description = "Ask questions by voice about your immediate surroundings or general queries.",
+                    badge = "TWO-WAY VOICE",
+                    badgeColor = Color(0xFF303F9F),
                     onClick = { navController.navigate("voiceAssistant") }
                 )
                 ModeCard(
                     icon = Icons.Filled.Book,
-                    title = "Read text",
-                    description = "Point the camera at a sign, label, or page.",
-                    badge = "READ ALOUD",
+                    title = "Mode 3: Read Text Aloud",
+                    description = "Point at signs, documents, labels, or medicine packaging to hear them read aloud.",
+                    badge = "OCR READER",
+                    badgeColor = Color(0xFFE65100),
                     onClick = { navController.navigate("readText") }
                 )
             }
 
+            // EPICS Project Banner
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE7F3F0)),
+                onClick = { epicsDialogVisible.value = true }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Filled.VolunteerActivism, contentDescription = null, tint = Teal, modifier = Modifier.padding(10.dp))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("EPICS Engineering Team", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("Sumit Prasad, Divyanshu, Bhavya, Faiz, Dhruv", color = Color(0xFF527471), fontSize = 12.sp)
+                    }
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
+                }
+            }
+
+            // Safety Warning Notice
             Row(
                 modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp),
                 verticalAlignment = Alignment.Top
@@ -155,54 +204,51 @@ fun MainPage(navController: NavHostController) {
                 Icon(Icons.Filled.AccessibilityNew, contentDescription = null, tint = Teal, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("A helpful companion, not a replacement for a cane or guide dog.", color = Ink, fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Use your usual mobility tools and follow local safety signals.", color = Color(0xFF526563), fontSize = 12.sp, lineHeight = 18.sp)
+                    Text("Safety Notice", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("DRISHTI is an assistive companion, not a replacement for a white cane, guide dog, or personal judgment.", color = Color(0xFF526563), fontSize = 12.sp, lineHeight = 18.sp)
                 }
             }
-            Text("VIT BHOPAL · GROUP 36", color = Color(0xFF71807D), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-            Spacer(Modifier.height(12.dp))
-        }
-    }
 
-    if (helpVisible.value) {
-        AlertDialog(
-            onDismissRequest = { helpVisible.value = false },
-            title = { Text("Getting started", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Live navigation uses the camera to describe the scene in short spoken updates.")
-                    Text("Ask DRISHTI listens for a question and reads its answer aloud.")
-                    Text("Read text captures a page or sign and speaks the words it can recognize.")
-                    Text("Allow camera and microphone access when prompted. An internet connection and a Gemini API key are needed for AI features.")
-                }
-            },
-            confirmButton = { Button(onClick = { helpVisible.value = false }) { Text("Done") } }
-        )
+            Spacer(Modifier.height(14.dp))
+        }
     }
 }
 
 @Composable
-private fun ModeCard(icon: ImageVector, title: String, description: String, badge: String, onClick: () -> Unit) {
+private fun ModeCard(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    badge: String,
+    badgeColor: Color,
+    onClick: () -> Unit
+) {
     Card(
-        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onClick
     ) {
-        Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = Mint, shape = RoundedCornerShape(16.dp), modifier = Modifier.size(52.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = Teal, modifier = Modifier.size(26.dp))
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = Mint, modifier = Modifier.size(42.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, tint = Teal, modifier = Modifier.size(24.dp))
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(badge, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                }
+                Surface(shape = CircleShape, color = Color(0xFFF0F4F3), modifier = Modifier.size(34.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.ArrowForward, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(description, color = Color(0xFF526563), fontSize = 12.sp, lineHeight = 17.sp)
-                Text(badge, color = Teal, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.1.sp)
-            }
-            Icon(Icons.Filled.ArrowForward, contentDescription = "Open $title", tint = Teal)
+            Text(description, color = Color(0xFF47625F), fontSize = 13.sp, lineHeight = 19.sp)
         }
     }
 }

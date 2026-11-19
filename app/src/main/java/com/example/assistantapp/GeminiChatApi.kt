@@ -1,9 +1,19 @@
 package com.example.assistantapp
 
+import android.content.Context
+
 /** Sends a spoken question and optional recent scene description to Gemini. */
-suspend fun askDrishti(message: String, frameData: String? = null): String {
-    val context = frameData?.takeIf { it.isNotBlank() }
+suspend fun askDrishti(
+    message: String,
+    frameData: String? = null,
+    context: Context? = null
+): String {
+    val sceneContext = frameData?.takeIf { it.isNotBlank() }
         ?.let { "Recent camera description: $it\n\n" }
         .orEmpty()
-    return GeminiClient.ask("${context}User's question: $message", maxOutputTokens = 140)
+    return GeminiClient.ask(
+        prompt = "${sceneContext}User's question: $message",
+        maxOutputTokens = 120,
+        context = context
+    )
 }

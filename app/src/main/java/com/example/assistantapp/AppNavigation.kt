@@ -9,8 +9,9 @@ import androidx.navigation.compose.composable
 fun DrishtiNavigation(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "mainPage") {
         composable("mainPage") { MainPage(navController) }
-        composable("blindMode") { BlindModeScreen() }
-        composable("readText") { BlindModeScreen(startInReadMode = true) }
-        composable("voiceAssistant") { VoiceAssistantScreen() }
+        composable("blindMode") { BlindModeScreen(navController = navController) }
+        composable("readText") { BlindModeScreen(startInReadMode = true, navController = navController) }
+        composable("voiceAssistant") { VoiceAssistantScreen(navController = navController) }
+        composable("settings") { SettingsScreen(navController = navController) }
     }
 }

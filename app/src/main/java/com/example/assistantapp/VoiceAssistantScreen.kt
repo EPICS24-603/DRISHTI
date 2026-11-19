@@ -14,13 +14,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
@@ -28,8 +32,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -48,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -56,7 +63,7 @@ private val VoiceTeal = Color(0xFF087E78)
 private val VoiceMint = Color(0xFFE3F5EF)
 
 @Composable
-fun VoiceAssistantScreen() {
+fun VoiceAssistantScreen(navController: NavHostController? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var hasPermission by remember {
@@ -107,7 +114,7 @@ fun VoiceAssistantScreen() {
                 status = "Getting an answer…"
                 scope.launch {
                     answer = try {
-                        askDrishti(spoken)
+                        askDrishti(spoken, context = context)
                     } catch (error: Exception) {
                         error.message ?: "Could not get an answer. Please try again."
                     }
@@ -127,63 +134,86 @@ fun VoiceAssistantScreen() {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF5F7F4)).padding(22.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        modifier = Modifier.fillMaxSize().background(Color(0xFFF5F7F4))
     ) {
-        Spacer(Modifier.height(10.dp))
-        Text("ASK DRISHTI", color = VoiceTeal, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.6.sp)
-        Text("What would you\nlike to know?", color = VoiceInk, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        Text("Ask about what you see or any other question. Your answer will be spoken aloud.", color = Color(0xFF526563), fontSize = 15.sp, lineHeight = 22.sp, textAlign = TextAlign.Center)
-
-        Card(
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("STATUS", color = VoiceTeal, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
-                Text(status, color = VoiceInk, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                if (question.isNotBlank()) {
-                    Text("YOU ASKED", color = Color(0xFF71807D), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                    Text(question, color = VoiceInk, fontSize = 15.sp)
-                }
-                if (answer.isNotBlank()) {
-                    Text("DRISHTI", color = Color(0xFF71807D), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                    Text(answer, color = VoiceInk, fontSize = 16.sp, lineHeight = 23.sp)
-                    OutlinedButton(onClick = { tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "drishti-answer") }) {
-                        Text("Repeat answer")
+        // Top App Bar with back navigation
+        Surface(color = Color.White, shadowElevation = 2.dp) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (navController != null) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back to Home", tint = VoiceInk)
                     }
+                }
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text("AI Voice Assistant", color = VoiceInk, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Conversational Q&A", color = Color(0xFF6E8E8B), fontSize = 11.sp)
                 }
             }
         }
 
-        Button(
-            onClick = {
-                if (!hasPermission) requestPermission.launch(Manifest.permission.RECORD_AUDIO)
-                else {
-                    question = ""
-                    answer = ""
-                    listening = true
-                    try { recognizer.startListening(speechIntent) } catch (_: Exception) {
-                        listening = false
-                        status = "Voice input isn’t available on this device."
+        Column(
+            modifier = Modifier.fillMaxSize().padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("What would you\nlike to know?", color = VoiceInk, fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text("Ask questions about your environment or request assistance. The answer will be spoken aloud.", color = Color(0xFF526563), fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center)
+
+            Card(
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("STATUS", color = VoiceTeal, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+                    Text(status, color = VoiceInk, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    if (question.isNotBlank()) {
+                        Text("YOU ASKED", color = Color(0xFF71807D), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text(question, color = VoiceInk, fontSize = 15.sp)
+                    }
+                    if (answer.isNotBlank()) {
+                        Text("DRISHTI", color = Color(0xFF71807D), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text(answer, color = VoiceInk, fontSize = 16.sp, lineHeight = 23.sp)
+                        OutlinedButton(onClick = { tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "drishti-answer") }) {
+                            Text("Repeat answer")
+                        }
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = VoiceTeal)
-        ) {
-            Icon(Icons.Filled.Mic, contentDescription = null)
-            Text(if (listening) " Listening…" else " Ask by voice", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-        if (listening) {
-            OutlinedButton(onClick = { recognizer.cancel(); listening = false; status = "Ready when you are" }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Stop, contentDescription = null)
-                Text(" Stop listening")
             }
+
+            Button(
+                onClick = {
+                    if (!hasPermission) requestPermission.launch(Manifest.permission.RECORD_AUDIO)
+                    else {
+                        question = ""
+                        answer = ""
+                        listening = true
+                        try { recognizer.startListening(speechIntent) } catch (_: Exception) {
+                            listening = false
+                            status = "Voice input isn’t available on this device."
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = VoiceTeal)
+            ) {
+                Icon(Icons.Filled.Mic, contentDescription = null)
+                Text(if (listening) " Listening…" else " Ask by voice", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+            if (listening) {
+                OutlinedButton(onClick = { recognizer.cancel(); listening = false; status = "Ready when you are" }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Stop, contentDescription = null)
+                    Text(" Stop listening")
+                }
+            }
+            Text("Voice queries are analyzed by the fast Gemini 3.5 Flash-Lite model.", color = Color(0xFF71807D), fontSize = 11.sp, textAlign = TextAlign.Center)
         }
-        Text("Your question is sent to Gemini to create an answer.", color = Color(0xFF71807D), fontSize = 11.sp, textAlign = TextAlign.Center)
     }
 }
